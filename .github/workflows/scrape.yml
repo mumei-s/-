@@ -2,6 +2,12 @@ name: Update creator zukan URLs
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/scrape.yml'
+      - 'scripts/scrape.py'
   schedule:
     - cron: '17 * * * *'
 
