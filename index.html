@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>#クリエイター図鑑 URL一括抽出</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background:#0b0d10; color:#f5f7fa; }
+    main { max-width:900px; margin:auto; padding:24px 16px 56px; }
+    h1 { font-size:clamp(24px,6vw,42px); margin:0 0 8px; }
+    .sub { color:#aab3c0; margin:0 0 22px; }
+    .card { background:#151922; border:1px solid #2b3240; border-radius:18px; padding:16px; margin-bottom:16px; }
+    .stats { display:flex; gap:12px; flex-wrap:wrap; }
+    .pill { background:#202633; padding:10px 14px; border-radius:999px; font-weight:700; }
+    button { width:100%; border:0; border-radius:14px; padding:16px; font-size:18px; font-weight:800; cursor:pointer; margin-top:10px; }
+    #copy { background:#fff; color:#111; }
+    #refresh { background:#252c38; color:#fff; }
+    textarea { width:100%; min-height:55vh; resize:vertical; border-radius:14px; border:1px solid #343c4a; background:#0f1218; color:#eaf0f6; padding:14px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:14px; line-height:1.6; }
+    .ok { color:#75e39a; font-weight:700; min-height:1.5em; }
+    .warn { color:#ffcc66; }
+    a { color:#9bc3ff; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>#クリエイター図鑑</h1>
+  <p class="sub">新着記事URLを、表示順のまま一括コピー</p>
+
+  <section class="card">
+    <div class="stats">
+      <div class="pill">取得件数: <span id="count">-</span></div>
+      <div class="pill">更新: <span id="updated">-</span></div>
+    </div>
+    <button id="copy">URLを全部コピー</button>
+    <button id="refresh">表示を再読込</button>
+    <p id="status" class="ok"></p>
+  </section>
+
+  <section class="card">
+    <textarea id="urls" readonly spellcheck="false" placeholder="取得データを読み込み中…"></textarea>
+  </section>
+
+  <p class="sub">元ページ: <a href="https://note.com/hashtag/%E3%82%AF%E3%83%AA%E3%82%A8%E3%82%A4%E3%82%BF%E3%83%BC%E5%9B%B3%E9%91%91?f=new" target="_blank" rel="noopener">note #クリエイター図鑑 新着</a></p>
+</main>
+<script>
+const els = {
+  count: document.querySelector('#count'),
+  updated: document.querySelector('#updated'),
+  urls: document.querySelector('#urls'),
+  status: document.querySelector('#status'),
+  copy: document.querySelector('#copy'),
+  refresh: document.querySelector('#refresh')
+};
+
+async function loadData() {
+  els.status.textContent = '読み込み中…';
+  try {
+    const res = await fetch('./data/articles.json?ts=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) throw new Error('まだ取得データがありません');
+    const data = await res.json();
+    const urls = Array.isArray(data.urls) ? data.urls : [];
+    els.urls.value = urls.join('\n');
+    els.count.textContent = urls.length;
+    const d = data.fetched_at ? new Date(data.fetched_at) : null;
+    els.updated.textContent = d && !Number.isNaN(d.getTime()) ? d.toLocaleString('ja-JP') : '-';
+    els.status.textContent = '取得データを読み込みました';
+  } catch (e) {
+    els.urls.value = '';
+    els.count.textContent = '0';
+    els.status.textContent = '初回取得前です。GitHub Actionsを1回実行してください。';
+    els.status.classList.add('warn');
+  }
+}
+
+els.copy.addEventListener('click', async () => {
+  const text = els.urls.value;
+  if (!text) {
+    els.status.textContent = 'コピーするURLがありません';
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    els.urls.focus();
+    els.urls.select();
+    document.execCommand('copy');
+    els.urls.setSelectionRange(0, 0);
+  }
+  els.status.textContent = `${text.split(/\n/).filter(Boolean).length}件コピーしました`;
+});
+
+els.refresh.addEventListener('click', loadData);
+loadData();
+</script>
+</body>
+</html>
